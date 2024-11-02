@@ -207,10 +207,9 @@
     <None Include="res\mfcCImage.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\..\MFCProject\MFCProject\mfcCImage\res\20220315_logo.png" />
     <Image Include="res\20220315_logo.bmp" />
     <Image Include="res\20220315_logo.png" />
-    <Image Include="res\icon1.ico" />
-    <Image Include="res\icon2.ico" />
     <Image Include="res\mfcCImage.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

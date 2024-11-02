@@ -1,0 +1,41 @@
+#include <string>
+#include <vector>
+#include <iostream>
+
+using namespace std;
+
+int solution(vector<vector<int>> board, int k) {
+    int answer = 0;
+    int rows = board.size();
+    int cols = board[0].size();
+
+    if ((rows<1) && (rows>100) && (cols<1) && (cols>100))
+       return 0;
+    
+    if (k >= 0 && k < rows + cols)
+    {
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                if ((board[i][j]) <0 || ((board[i][j]) > 10000)) return 0;
+                if (i + j <= k) {
+                    answer += board[i][j];
+                }
+            }
+        }
+    }
+    return answer;
+}
+
+int main() {
+ 
+    std::vector<std::vector<int>> board = {
+        {1, 2, 3},
+        {4, 5, 6},
+        {7, 8, 9}
+    };
+    int k = 2;
+
+    std::cout <<"board \t"<< k <<"\t Result: " << solution(board, k) << std::endl;
+
+    return 0;
+}

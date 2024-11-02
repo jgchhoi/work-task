@@ -1,0 +1,21 @@
+#include <string>
+#include <vector>
+#include <iostream>
+using namespace std;
+
+int solution(int n, int k) {
+    int lambPrice = 12000; // 양꼬치 1인분의 가격
+    int drinkPrice = 2000; // 음료수 1개의 가격
+    int freeDrinks = n / 10; // 서비스로 제공되는 음료수 개수
+
+    int answer = (n * lambPrice) + ((k - freeDrinks) * drinkPrice);
+    return answer;
+}
+
+int main() {
+    int n, k;
+    std::cout << "양꼬치 인분 수와 음료수 개수를 입력하세요:" << std::endl;;
+    std::cout << "n \t k \t result" << std::endl;
+    std::cin >> n >> k;
+    std::cout << solution(n, k) << std::endl;
+}

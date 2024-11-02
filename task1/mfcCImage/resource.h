@@ -18,6 +18,11 @@
 #define IDC_B_ACTiON                    1005
 #define IDC_B_OPEN                      1006
 #define IDC_STATIC_SIZE                 1007
+#define IDC_STATIC_BK                   1009
+#define IDC_STATIC_COORD_S              1010
+#define IDC_STATIC_COORD_E              1011
+#define IDC_CHECK1                      1012
+#define IDC_CHK_LINEDRAW                1012
 
 // Next default values for new objects
 // 
@@ -25,7 +30,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        136
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1008
+#define _APS_NEXT_CONTROL_VALUE         1013
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

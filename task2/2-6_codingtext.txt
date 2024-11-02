@@ -1,0 +1,66 @@
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <cstdlib>
+
+using namespace std;
+
+int solution(string s) {
+    int answer = 0;
+    std::vector<int> numbers;
+    std::istringstream iss(s);
+    std::string token;
+    std::string oldtoken;
+    
+    if (std::isspace(s.front()) || std::isspace(s.back())) {
+        return 0; 
+    }
+     if (s.front() == 'Z') {
+          return 0; 
+     }
+    
+     if(s.length()>200 && s.length()<1)
+        return 0; 
+    
+     while (iss >> token) {
+        
+         if (token == "Z") 
+         {
+             if(oldtoken == token)
+                 return 0; 
+             if (!numbers.empty()) {
+                 numbers.pop_back();
+             }
+         }
+         else
+         {
+                 int num = std::stoi(token);
+                 if (num > -1000 && num < 1000) { // 숫자범위 확인
+                     numbers.push_back(num);
+                }
+                else {
+
+                     return 0; 
+                 }
+        }
+         oldtoken = token;
+    }
+
+     for (int num : numbers) {
+         answer += num;
+     }
+
+    return answer;
+}
+
+int main() {
+
+    std::string s = "1 2 3 Z 4 5 Z 6";
+
+    std::cout << "입력: " << s << std::endl;
+    int result = solution(s);
+    std::cout << "결과: " << result << std::endl;
+
+    return 0;
+}

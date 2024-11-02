@@ -1,0 +1,29 @@
+#include <string>
+#include <vector>
+#include <iostream>
+using namespace std;
+
+int solution(string my_string, string is_prefix) {
+    int answer = 0;
+    if (my_string.find(is_prefix) == 0) {
+        answer = 1;
+    }
+    else    {
+        answer= 0;
+    }
+    return answer;
+}
+
+
+int main() {
+    std::string my_string = "banana";
+    std::string is_prefix;
+
+    std::cout << "접두사를 확인할 문자열을 입력하세요: ";
+    std::cin >> is_prefix;
+
+    int result = solution(my_string, is_prefix);
+    std::cout << "결과: " << result << std::endl;
+
+    return 0;
+}

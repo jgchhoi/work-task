@@ -1,0 +1,38 @@
+#include <string>
+#include <vector>
+#include <iostream>
+using namespace std;
+
+int solution(vector<string> orders) {
+    int answer = 0;
+    const int americanoPrice = 4500;
+    const int cafelattePrice = 5000;
+
+    for (const std::string& order : orders) {
+        if (order == "iceamericano" || order == "americanoice" ||
+            order == "hotamericano" || order == "americanohot" ||
+            order == "americano" || order == "anything") {
+            answer += americanoPrice;
+        }
+        else if (order == "icecafelatte" || order == "cafelatteice" ||
+            order == "hotcafelatte" || order == "cafelattehot" ||
+            order == "cafelatte") {
+            answer += cafelattePrice;
+        }
+    }
+    return answer;
+}
+
+int main() {
+
+    std::vector<std::string> orders = { "iceamericano", "iceamericano", "cafelatte", "anything", "hotcafelatte" };
+
+    std::cout << "주문내역:" <<std::endl;
+    for (const std::string& order : orders) {
+        std::cout << order << std::endl;
+    }
+    int result = solution(orders);
+    std::cout << "총 지불 금액: " << result << "원" << std::endl;
+
+    return 0;
+}

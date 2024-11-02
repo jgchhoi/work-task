@@ -1,0 +1,39 @@
+#include <string>
+#include <vector>
+#include <iostream>
+#define a_min 1
+#define b_max 10000
+using namespace std;
+std::string concatenate(int a, int b) {
+    return std::to_string(a) + std::to_string(b);
+}
+
+int solution(int a, int b) {
+    
+    int answer = 0;
+    
+    if(a>=a_min && b<b_max)
+    {
+        std::string ab = concatenate(a, b);
+        std::string ba = concatenate(b, a);
+
+        if (ab >= ba) {
+            answer = std::stoi(ab);
+        }
+        else {
+            answer = std::stoi(ba);
+        }
+    }
+    return answer;
+}
+
+int main() {
+    int a, b;
+    std::cout << "두 정수를 입력하세요: ";
+    std::cin >> a >> b;
+
+    int result = solution(a, b);
+    std::cout << "결과: " << result << std::endl;
+    
+    return 0;
+}

@@ -24,8 +24,8 @@ private:
 	int m_nWidth;// 이미지 Draw 영역
 	int m_nHeight;//이미지 Draw 영역
 	int m_nRadius;// 반지름
-	int m_nStartX;
-	int m_nStartY;
+	int m_nCurrentX;
+	int m_nCurrentY;
 	int m_nEndX;
 	int m_nEndY;
 	CImage m_image;
@@ -33,7 +33,10 @@ private:
 	double  m_dIntercept = 0.0;
 	int m_borderWidth = 0;
 	int m_borderHeight =0 ;
-
+	bool m_bDrawCenter = false;
+public:
+	void drawCenterEnable(bool bDraw);
+	bool IsDrawCenter() { return m_bDrawCenter; }
 	bool DirectoryExists(const CString& directoryPath);
 	void saveImage(int count);
 	void UpdateDisplay();
@@ -43,6 +46,7 @@ private:
 	BOOL validatePos(int x, int y);
 	void drawCircle(unsigned char* fm, int x, int y, int nRadius, int nGray);
 	BOOL PtInCircle(int i, int j, int nCenterX, int nCenterY, int nRadius);
+	void drawCenter(int x1, int y1, int x2, int y2);
 // 구현입니다.
 protected:
 	HICON m_hIcon;
@@ -51,20 +55,27 @@ protected:
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
+	CBrush m_brush;
+	COLORREF m_bgColor;
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
 	afx_msg void OnBnClickedBDraw();
 	afx_msg void OnBnClickedBAction();
 	afx_msg void OnBnClickedBOpen();
-	afx_msg void OnEnChangeEStartX();
-	afx_msg void OnEnChangeEStartY();
+//	afx_msg void OnEnChangeEStartX();
+//	afx_msg void OnEnChangeEStartY();
 
 	void GetCoord();
 	void GetCenterData();
 	void calculateLineEquation(int x1, int y1, int x2, int y2);
 	void ChangeImageSize();
 	void CalculateBorderSize();
+	void createImage();
+
 
 	afx_msg void OnExitSizeMove();
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+
 };

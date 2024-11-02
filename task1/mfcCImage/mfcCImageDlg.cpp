@@ -15,6 +15,11 @@ using namespace std;
 #endif
 
 #define GRAY_COLOR 100
+#define CLEAN_COLOR 0xff
+#define MIN_RAIDUS 10
+#define COORD_COLOR  RGB(255, 0, 0)
+#define CENTER_COLOR  RGB(255, 0, 0)
+#define DOT_COLOR     RGB(255,0,0)
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
 class CAboutDlg : public CDialogEx
@@ -49,29 +54,22 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
-//	ON_WM_SIZE()
-//ON_WM_EXITSIZEMOVE()
 END_MESSAGE_MAP()
 
 
 // CmfcCImageDlg 대화 상자
-
-
-
 CmfcCImageDlg::CmfcCImageDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MFCCIMAGE_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
-;
 	m_nRadius = 20;
 	m_nWidth = 640;
 	m_nHeight = 480;
-
-	m_nStartX = 100;
-	m_nStartY =100;
-	m_nEndX = 300;
-	m_nEndY = 300;
+	m_nCurrentX = 200;
+	m_nCurrentY =200;
+	m_nEndX = 400;
+	m_nEndY = 400;
 }
 
 void CmfcCImageDlg::DoDataExchange(CDataExchange* pDX)
@@ -86,9 +84,8 @@ BEGIN_MESSAGE_MAP(CmfcCImageDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_B_DRAW, &CmfcCImageDlg::OnBnClickedBDraw)
 	ON_BN_CLICKED(IDC_B_ACTiON, &CmfcCImageDlg::OnBnClickedBAction)
 	ON_BN_CLICKED(IDC_B_OPEN, &CmfcCImageDlg::OnBnClickedBOpen)
-	ON_EN_CHANGE(IDC_E_START_X, &CmfcCImageDlg::OnEnChangeEStartX)
-	ON_EN_CHANGE(IDC_E_START_Y, &CmfcCImageDlg::OnEnChangeEStartY)
 ON_WM_EXITSIZEMOVE()
+ON_WM_CTLCOLOR()
 END_MESSAGE_MAP()
 
 
@@ -127,13 +124,21 @@ BOOL CmfcCImageDlg::OnInitDialog()
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
 	ChangeImageSize();
 
-	SetDlgItemInt(IDC_E_START_X, m_nStartX);
-	SetDlgItemInt(IDC_E_START_Y, m_nStartY);
+	SetDlgItemInt(IDC_E_START_X, m_nCurrentX);
+	SetDlgItemInt(IDC_E_START_Y, m_nCurrentY);
 	SetDlgItemInt(IDC_E_END_X, m_nEndX);
 	SetDlgItemInt(IDC_E_END_Y, m_nEndY);
+	GetDlgItem(IDC_B_ACTiON)->EnableWindow(FALSE);
 
+	m_bgColor = RGB(250,250, 250);
+	m_brush.CreateSolidBrush(m_bgColor);
 
-	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
+	CWnd* pMyControl = GetDlgItem(IDC_B_DRAW);
+	if (pMyControl != nullptr) {
+		pMyControl->SetFocus();
+	}
+
+	return FALSE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
 void CmfcCImageDlg::CalculateBorderSize() {
@@ -148,7 +153,6 @@ void CmfcCImageDlg::CalculateBorderSize() {
 	m_borderWidth = (windowRect.Width() - clientRect.Width()) / 2;
 	m_borderHeight = windowRect.Height() - clientRect.Height() - GetSystemMetrics(SM_CYCAPTION);
 
-
 }
 
 void CmfcCImageDlg::ChangeImageSize()
@@ -157,17 +161,30 @@ void CmfcCImageDlg::ChangeImageSize()
 
 	GetClientRect(&rect);
 	GetDlgItem(IDC_STATIC_SIZE)->GetClientRect(&textRect);
-
 	m_nWidth = rect.right - textRect.right - m_borderWidth*4;
-	m_nHeight = rect.bottom- m_borderHeight;
+	m_nHeight = rect.bottom - m_borderHeight;
+
+	CRect bkRect(m_borderWidth, m_borderHeight, m_nWidth, m_nHeight);
+	GetDlgItem(IDC_STATIC_BK)->MoveWindow(bkRect);
+	GetDlgItem(IDC_STATIC_BK)->GetClientRect(&rect);//NCClient 영역 제거한 value
+
+	m_nWidth = rect.right;
+	m_nHeight = rect.bottom;
 
 	CString str;
-	str.Format(_T("배경이미지 크기(%d,%d)\n입력 좌표(0,0) ~ (%d,%d)"), m_nWidth, m_nHeight, m_nWidth, m_nHeight);
+	str.Format(_T("배경 이미지 크기:(%d, %d)\n입력 좌표:(0, 0) -> (%d, %d)"), m_nWidth, m_nHeight, m_nWidth, m_nHeight);
+	GetDlgItem(IDC_STATIC_SIZE)->ModifyStyle(0, SS_CENTER);
 	SetDlgItemText(IDC_STATIC_SIZE, str);
 
 	Invalidate();
 	UpdateWindow();
-	UpdateDisplay();
+
+	if (m_nWidth > 0 && m_nHeight > 0)
+	{
+		UpdateDisplay();
+		if (IsDrawCenter())
+			GetCenterData();
+	}
 }
 
 void CmfcCImageDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -176,6 +193,24 @@ void CmfcCImageDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	{
 		CAboutDlg dlgAbout;
 		dlgAbout.DoModal();
+	}
+	else if ((nID & 0xFFF0) == SC_RESTORE)
+	{
+		CDialogEx::OnSysCommand(nID, lParam);
+		ChangeImageSize();
+	
+	}
+	else if ((nID & 0xFFF0) == SC_MINIMIZE)
+	{
+
+		CDialogEx::OnSysCommand(nID, lParam);
+		ChangeImageSize();
+	}
+	else if ((nID & 0xFFF0) == SC_MAXIMIZE)
+	{
+		CDialogEx::OnSysCommand(nID, lParam);
+		ChangeImageSize();
+
 	}
 	else
 	{
@@ -239,25 +274,22 @@ void CmfcCImageDlg::cleanImage()
 
 void CmfcCImageDlg::GetCoord()
 {
-	m_nStartX = GetDlgItemInt(IDC_E_START_X);
-	m_nStartY = GetDlgItemInt(IDC_E_START_Y);
+	m_nCurrentX = GetDlgItemInt(IDC_E_START_X);
+	m_nCurrentY = GetDlgItemInt(IDC_E_START_Y);
 	m_nEndX = GetDlgItemInt(IDC_E_END_X);
 	m_nEndY = GetDlgItemInt(IDC_E_END_Y);
 }
-//
-// 이미지 그리기
-//
-void CmfcCImageDlg::OnBnClickedBDraw()
+
+void CmfcCImageDlg::createImage()
 {
 	int nWidth = m_nWidth;
 	int nHeight = m_nHeight;
+	unsigned char* fm;
 	int nBpp = 8;//bit per pixel
 
 	if (m_image != NULL)
 		m_image.Destroy();
-
 	m_image.Create(nWidth, nHeight, nBpp);
-
 	if (nBpp == 8)
 	{
 		static RGBQUAD rgb[256];
@@ -266,77 +298,72 @@ void CmfcCImageDlg::OnBnClickedBDraw()
 		m_image.SetColorTable(0, 256, rgb);
 	}
 
+
+}
+//
+// 이미지 그리기
+//
+void CmfcCImageDlg::OnBnClickedBDraw()
+{
+	int nHeight = m_nHeight;
+	unsigned char* fm;
+
+	createImage();
+
 	cleanImage();
 
 	m_nRadius = rand() % (nHeight / 4);
-	if (m_nRadius < 10)
-		m_nRadius = 10;
-	unsigned char* fm = (unsigned char*)m_image.GetBits();
-
+	if (m_nRadius < MIN_RAIDUS)
+		m_nRadius = MIN_RAIDUS;
+	fm = (unsigned char*)m_image.GetBits();
 
 	GetCoord();
-
-	drawCircle(fm, m_nStartX, m_nStartY, m_nRadius, GRAY_COLOR);
-
+	drawCircle(fm, m_nCurrentX, m_nCurrentY, m_nRadius, GRAY_COLOR);
 	UpdateDisplay();
-	//fm[nHeight/2 * nPitch + nWidth/2] = 0;
-	
-	//CClientDC dc(this);
-	//m_image.Draw(dc, 0, 0);
-
-	//int x = nWidth/2+10;
-	//int y = nHeight/2+10;
-	//// 출력할 텍스트
-	//CString text = _T("안녕하세요, MFC!");
-	//// 특정 좌표값에 텍스트 출력
-	//dc.TextOut(x, y, text);
-	//UpdateDisplay();
-
+	drawCenterEnable(false);
 }
 
 void CmfcCImageDlg::saveImage(int count)
 {
 	WCHAR buffer[MAX_PATH];
-
+	CString filename;
 	::GetCurrentDirectory(MAX_PATH, buffer);
 
 	CString str(buffer);
 	str += "/Image";
 	if (false == DirectoryExists(str))
 		CreateDirectory(str, NULL);
-	CString filename;
-	filename.Format(_T("/save%d.bmp"), count);
+	filename.Format(_T("/save_%d.bmp"), count);
 	m_image.Save(str + filename);
-
 }
 
 void CmfcCImageDlg::moveCoord()
 {
 	if (m_dSlope != 0.0)
 	{
-		if (m_nEndX > m_nStartX)
+		if (m_nEndX > m_nCurrentX)
 		{
-			if (m_nStartX < m_nEndX)
-				m_nStartX++;
+			if (m_nCurrentX < m_nEndX)
+				m_nCurrentX++;
 		}
-		else if (m_nEndX < m_nStartX)
+		else if (m_nEndX < m_nCurrentX)
 		{
-			if (m_nStartX > m_nEndX)
-				m_nStartX--;
+			if (m_nCurrentX > m_nEndX)
+				m_nCurrentX--;
 		}
-		m_nStartY = (int)(m_dSlope * m_nStartX + m_dIntercept);
+		m_nCurrentY = (int)(m_dSlope * m_nCurrentX + m_dIntercept);
 	}
 	else
 	{
-		if (m_nEndY > m_nStartY)
+		if (m_nEndY > m_nCurrentY)
 		{
-			if (m_nStartY  < m_nEndY)
-				m_nStartY++;
+			if (m_nCurrentY  < m_nEndY)
+				m_nCurrentY++;
 		}
-		else if (m_nEndY < m_nStartY)
+		else if (m_nEndY < m_nCurrentY)
 		{
-			if (m_nStartY  > m_nEndY)
-				m_nStartY--;
+			if (m_nCurrentY  > m_nEndY)
+				m_nCurrentY--;
 		}
 	}
 }
@@ -347,12 +374,9 @@ void CmfcCImageDlg::moveRect()
 	int nRadius = m_nRadius;
 	unsigned char* fm = (unsigned char*)m_image.GetBits();
 
-	drawCircle(fm, m_nStartX, m_nStartY, nRadius, 0xff);//clean
-	
+	drawCircle(fm, m_nCurrentX, m_nCurrentY, nRadius, CLEAN_COLOR);//clean
 	moveCoord();
-
-	drawCircle(fm, m_nStartX, m_nStartY, nRadius, nGray);
-
+	drawCircle(fm, m_nCurrentX, m_nCurrentY, nRadius, nGray);
 	UpdateDisplay();
 }
 
@@ -368,17 +392,17 @@ BOOL CmfcCImageDlg::validatePos(int x, int y)
 	return bRet;
 }
 
-void CmfcCImageDlg::drawCircle(unsigned char* fm, int nCenterX, int nCenterY, int nRadius, int nGray)
+void CmfcCImageDlg::drawCircle(unsigned char* fm, int nCenterX, int nCenterY, int nRadius, int nColor)
 {
 	int nPitch = m_image.GetPitch();
 	
 	for (int j = nCenterY - nRadius;j < nCenterY + nRadius;j++) {
 		for (int i = nCenterX - nRadius; i < nCenterX + nRadius;i++) {
-			if (i < m_nWidth && j < m_nHeight)
+			if (i < m_nWidth && j < m_nHeight)//이미지 영역
 			{
-				if(i>0 && j>0)
+				if(i>0 && j>0)//이미지 영역
 				if (PtInCircle(i, j, nCenterX, nCenterY, nRadius))
-					fm[j * nPitch + i] = nGray;
+					fm[j * nPitch + i] = nColor;
 			}
 		}
 	}
@@ -397,22 +421,29 @@ BOOL CmfcCImageDlg::PtInCircle(int i, int j, int nCenterX, int nCenterY, int nRa
 	return bRet;
 }
 
-void CmfcCImageDlg::calculateLineEquation(int x1,int y1,int x2, int y2) {
+//
+// 두점 일차함수
+//
+void CmfcCImageDlg::calculateLineEquation(int x1, int y1, int x2, int y2) {
 
 	double dx = (x2 - x1);
 	double dy = (y2 - y1);
-	m_dIntercept =0.0;
+	m_dIntercept = 0.0;
 	m_dSlope = 0.0;
+
 	if (x2 != x1)
 	{
 		m_dSlope = dy / dx;
 	}
 	else
+	{
 		m_dSlope = 0.0;
-
+	}
 	m_dIntercept = y1 - m_dSlope * x1;// 절편 계산
 }
-
+//
+//
+//
 void CmfcCImageDlg::OnBnClickedBAction()
 {
 	if (m_image != NULL)
@@ -421,11 +452,12 @@ void CmfcCImageDlg::OnBnClickedBAction()
 
 		if (fm != NULL)
 		{
-			drawCircle(fm, m_nStartX, m_nStartY, m_nRadius, 0xff);//clean
+			drawCircle(fm, m_nCurrentX, m_nCurrentY, m_nRadius, CLEAN_COLOR);//clean
 			GetCoord();
-			calculateLineEquation(m_nStartX, m_nStartY, m_nEndX, m_nEndY);
+			calculateLineEquation(m_nCurrentX, m_nCurrentY, m_nEndX, m_nEndY);
+
 			int count = 0;
-			while ((m_nStartX != m_nEndX && m_dSlope!=0.0) || (m_dSlope==0.0 && m_nStartY != m_nEndY))
+			while ((m_nCurrentX != m_nEndX && m_dSlope!=0.0) || (m_dSlope==0.0 && m_nCurrentY != m_nEndY))
 			{
 				moveRect();
 				saveImage(count++);
@@ -441,9 +473,8 @@ void CmfcCImageDlg::OnBnClickedBOpen()
 	if (m_image != NULL)
 		m_image.Destroy();
 
-	CFileDialog fileDlg(TRUE, _T("*.jpg"), NULL, OFN_FILEMUSTEXIST, _T("Image Files (*.bmp; *.jpg; *.png)|*.bmp; *.jpg; *.png||"));
+	CFileDialog fileDlg(TRUE, _T("*.jpg"), NULL, OFN_FILEMUSTEXIST, _T("Image Files (*.bmp; *.jpg;)|*.bmp; *.jpg||"));
 
-	// 파일 선택 대화 상자 표시
 	if (fileDlg.DoModal() == IDOK)
 	{
 		CString filePath = fileDlg.GetPathName();
@@ -456,30 +487,25 @@ void CmfcCImageDlg::OnBnClickedBOpen()
 		}
 		else
 		{
-			GetCenterData();
 			UpdateDisplay();
+			GetCenterData();
 		}
 	}
-}
-
-
-void CmfcCImageDlg::OnEnChangeEStartX()
-{
-	int nStartX = GetDlgItemInt(IDC_E_START_X);
-}
-
-
-void CmfcCImageDlg::OnEnChangeEStartY()
-{
-	int nStartY = GetDlgItemInt(IDC_E_START_Y);
 }
 
 
 void CmfcCImageDlg ::UpdateDisplay()
 {
 	CClientDC dc(this);
-	if(m_image)
-		m_image.Draw(dc, m_borderWidth, 0,m_nWidth,m_nHeight);
+	CDC* pDC = GetDlgItem(IDC_STATIC_BK)->GetDC();
+	if (m_image && pDC != nullptr && m_nWidth>0 && m_nHeight>0)
+	{
+		m_image.Draw(*pDC, 0, 0, m_nWidth, m_nHeight);
+	}
+	if (pDC != nullptr)
+	{
+		GetDlgItem(IDC_STATIC_BK)->ReleaseDC(pDC);
+	}
 }
 
 void CmfcCImageDlg::GetCenterData()
@@ -493,10 +519,10 @@ void CmfcCImageDlg::GetCenterData()
 	int nSumX = 0;
 	int nSumY = 0;
 	int nCount = 0;
-	int nLeft= INT_MAX;
+	int nLeft = INT_MAX;
 	int nRight = 0;
 	int nTop = INT_MAX;
-	int mBottom =0;
+	int mBottom = 0;
 
 	CRect rect(0, 0, nWidth, nHeight);
 	for (int j = rect.top; j < rect.bottom;j++)
@@ -509,28 +535,136 @@ void CmfcCImageDlg::GetCenterData()
 				nCount++;
 				if (nLeft > i)nLeft = i;
 				if (nRight < i)nRight = i;
-
 				if (nTop > i)nTop = j;
 				if (mBottom < j)mBottom = j;
 			}
 		}
 
+	int nW = (nRight - nLeft) / 2;
+	int nH = (mBottom - nTop) / 2;
+	double dCentorX = 0.0;
+	double dCentorY = 0.0;
 	if (nCount > 0)
 	{
-		double dCentorX = (double)nSumX / nCount;
-		double dCentorY = (double)nSumY / nCount;
-
-		cout << nLeft << ',' << nTop << "\t" << nRight <<"," << mBottom<< endl;
-
+		dCentorX = (double)nSumX / nCount;
+		dCentorY = (double)nSumY / nCount;
+		cout << nLeft << ',' << nTop << "\t" << nRight << "," << mBottom << endl;
 		cout << dCentorX << "\t" << dCentorY << endl;
+		drawCenterEnable(true);
+		drawCenter(nLeft, nTop, nRight, mBottom);
 	}
 }
 
+void CmfcCImageDlg::drawCenterEnable(bool bDraw)
+{
+	m_bDrawCenter = bDraw;
+	if(m_bDrawCenter)
+		GetDlgItem(IDC_B_ACTiON)->EnableWindow(FALSE);
+	else
+		GetDlgItem(IDC_B_ACTiON)->EnableWindow(TRUE);
+}
+
+void CmfcCImageDlg::drawCenter(int x1, int y1, int x2, int y2)
+{
+	int nHeight = m_image.GetHeight();;
+	int nWidth = m_image.GetWidth();
+	int nW = (x2 - x1) / 2;
+	int nH = (y2 - y1) / 2;
+
+	double dPhyCentorX = 0.0;
+	double dPhyCentorY = 0.0;
+	double dLogicalCentorX = 0.0;
+	double dLogicalCentorY = 0.0;
+
+	dLogicalCentorX = dPhyCentorX = x1 + nW;
+	dLogicalCentorY = dPhyCentorY = y1 + nH;
+
+	RECT rect;
+	CPen pen,dotpen;
+	CPen* OldPen;
+
+	CDC* pDC = GetDlgItem(IDC_STATIC_BK)->GetDC();
+	pen.CreatePen(PS_SOLID, 2, CENTER_COLOR);
+	dotpen.CreatePen(PS_DASHDOTDOT, 1, DOT_COLOR);
+
+	GetDlgItem(IDC_STATIC_BK)->GetClientRect(&rect);
+	double xRate = (float)rect.right / (float)nWidth;
+	double yRate = (float)rect.bottom / (float)nHeight;
+
+	if (pDC != nullptr)
+	{
+		dPhyCentorX *= xRate;
+		dPhyCentorY *= yRate;
+
+		int diff = static_cast<int>( MIN_RAIDUS * 0.5);
+
+		OldPen = pDC->SelectObject(&pen);
+		pDC->MoveTo(static_cast<int>(dPhyCentorX - diff), static_cast<int>(dPhyCentorY - diff));
+		pDC->LineTo(static_cast<int>(dPhyCentorX + diff), static_cast<int>(dPhyCentorY + diff));
+		pDC->MoveTo(static_cast<int>(dPhyCentorX + diff), static_cast<int>(dPhyCentorY - diff));
+		pDC->LineTo(static_cast<int>(dPhyCentorX - diff), static_cast<int>(dPhyCentorY + diff));
+
+		pDC->SelectObject(&dotpen);
+		pDC->MoveTo(static_cast<int>(dPhyCentorX +10 ), static_cast<int>(dPhyCentorY));
+		pDC->LineTo(static_cast<int>(x2 * xRate+10), static_cast<int>(dPhyCentorY));
+
+		//pDC->MoveTo(static_cast<int>(dPhyCentorX), static_cast<int>(y1 * yRate));
+		//pDC->LineTo(static_cast<int>(dPhyCentorX), static_cast<int>(dPhyCentorY - 10));
+
+		COLORREF textColor = COORD_COLOR;
+		COLORREF OldtextColor = pDC->GetTextColor();
+		pDC->SetTextColor(textColor);
+		CString formattedString;
+		formattedString.Format(_T(">(%d, %d)"), (int)dLogicalCentorX, (int)dLogicalCentorY);
+		pDC->TextOut(static_cast<int>(x2 * xRate + 10), static_cast<int>(dPhyCentorY - 8), formattedString);
+		pDC->SetTextColor(OldtextColor);
+		pDC->SelectObject(OldPen);
+	}
+
+	if (pDC != nullptr)
+	{
+		GetDlgItem(IDC_STATIC_BK)->ReleaseDC(pDC);
+	}
+	
+}
 
 void CmfcCImageDlg::OnExitSizeMove()
 {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
 
 	CDialogEx::OnExitSizeMove();
 	ChangeImageSize();
 }
+
+
+BOOL CmfcCImageDlg::PreTranslateMessage(MSG* pMsg)
+{
+	BOOL returnVal = FALSE;
+	if (pMsg->message == WM_KEYDOWN)
+	{
+		if (pMsg->wParam == VK_ESCAPE || pMsg->wParam == VK_RETURN)
+		{
+			returnVal = TRUE;
+		}
+	}
+	if (returnVal == FALSE)
+	{
+		returnVal =  CDialogEx::PreTranslateMessage(pMsg);
+	}
+	return returnVal;
+}
+
+
+HBRUSH CmfcCImageDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	HBRUSH hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
+
+	if (nCtlColor == CTLCOLOR_STATIC && pWnd->GetDlgCtrlID() == IDC_STATIC_SIZE)
+	{
+		pDC->SetBkColor(m_bgColor);
+		hbr = m_brush;
+	}
+	return hbr;
+}
+
+
+
