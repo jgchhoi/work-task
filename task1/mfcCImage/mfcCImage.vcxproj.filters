@@ -59,14 +59,5 @@
     <Image Include="res\mfcCImage.ico">
       <Filter>리소스 파일</Filter>
     </Image>
-    <Image Include="..\..\..\..\MFCProject\MFCProject\mfcCImage\res\20220315_logo.png">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="res\20220315_logo.png">
-      <Filter>리소스 파일</Filter>
-    </Image>
-    <Image Include="res\20220315_logo.bmp">
-      <Filter>리소스 파일</Filter>
-    </Image>
   </ItemGroup>
 </Project>
